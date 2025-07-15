@@ -17,4 +17,12 @@ catkin_package(
     CATKIN_DEPENDS fc_msgs geometry_msgs roscpp rospy
 )
 
+catkin_install_python(
+  PROGRAMS
+    dxf_script.py
+    io_test.py
+    test_script.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
 

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import comet_rpc as rpc
 import time
 from Welding import Welder
