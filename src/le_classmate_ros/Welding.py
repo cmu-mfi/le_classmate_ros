@@ -59,7 +59,7 @@ class Welder():
     poll_interval: float = 0.1
 
     def __init__(self, 
-                 server : rpc.Server, 
+                 server : str, 
                  laser_power_watts:int = 700, 
                  weld_voltage:float = 0., 
                  weld_current:float = 0., 
@@ -240,35 +240,17 @@ class Welder():
             print("Wire Fault Detected")
             return
         else: 
-            # User may uncomment AO writes below once signals are mapped -----------
-            # rpc.iovalset(self.server, rpc.IoType.AnalogOut, index=1, value=self.weld_voltage)
-            # rpc.iovalset(self.server, rpc.IoType.AnalogOut, index=2, value=self.weld_current)
-            # rpc.iovalset(self.server, rpc.IoType.AnalogOut, index=3, value=self.weld_wirefeed_speed)
-            # rpc.iovalset(self.server, rpc.IoType.AnalogOut, index=4, value=self.weld_wirefeed_speed)
-            # rpc.iovalset(self.server, rpc.IoType.AnalogOut, index=5, value=self.weld_wirefeed_speed)
-            # rpc.iovalset(self.server, rpc.IoType.AnalogOut, index=6, value=self.weld_wirefeed_speed)
-            rpc.iovalset(self.server, rpc.IoType.DigitalOut, index=26, value=1) # GAS START
-            time.sleep(0.5)
-            rpc.iovalset(self.server, rpc.IoType.DigitalOut, index=49, value=1) # WELD START 
-
-            start_time = time.time()
-            while time.time() - start_time < self.timeout: 
-                if rpc.iovalrd(self.server, rpc.IoType.DigitalIn, index=25).value == 1: #ARC DETECT
-                    break
-                time.sleep(self.poll_interval)
-            else:
-                print("ARC NOT ESTABLISHED")
-                self.weld_end()
-                return
+            rpc.iovalset(self.server, rpc.IoType.DigitalOut, index=20, value=1) # ArcTool Weld Start
+            rpc.iovalset(self.server, rpc.IoType.DigitalOut, index=21, value=0) # ArcTool Weld End
+            print("Weld Started")
             return  
         
     def weld_end(self):
         
         """Terminate welding and stop shielding-gas flow."""
 
-        rpc.iovalset(self.server, rpc.IoType.DigitalOut, index=49, value=0) # WELD START 
-        time.sleep(0.5)
-        rpc.iovalset(self.server, rpc.IoType.DigitalOut, index=26, value=0) # GAS START
+        rpc.iovalset(self.server, rpc.IoType.DigitalOut, index=20, value=0) # ArcTool Weld Start
+        rpc.iovalset(self.server, rpc.IoType.DigitalOut, index=21, value=1) # ArcTool Weld End
         print("Weld Ended")
 
     # ---------------------------------------------------------------------
@@ -299,6 +281,8 @@ class Welder():
 # -----------------------------------------------------------------------------
 
 """
+DOUT[20] - ArcTool Weld Start 
+DOUT[21] - ArcTool Weld End
 DOUT[25] - Weld Start
 DOUT[26] - Gas Start
 DOUT[27] - Touch cmd (future feedback)
@@ -324,4 +308,3 @@ DIN[26] - Touch detect
 DIN[27] - Gas fault
 DIN[28] - Wire fault
 """
-

@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-from Welding import Welder
+from fanuc_ros1.le_classmate_ros.src.Welding import Welder
 import comet_rpc as rpc
 import time
 

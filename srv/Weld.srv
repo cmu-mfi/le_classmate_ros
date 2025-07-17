@@ -1,0 +1,5 @@
+#request
+bool Welding
+---
+#response
+bool State

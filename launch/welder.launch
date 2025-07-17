@@ -1,0 +1,6 @@
+<launch> 
+    <arg name="server" default='192.168.2.151'/>
+    <node name="welder_node" pkg="le_classmate_ros" type="Welder.py" output="screen">
+        <param name = "server" type="str" value="$(arg server)"/>
+    </node>
+</launch>

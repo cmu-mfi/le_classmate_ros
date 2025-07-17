@@ -11,18 +11,36 @@ find_package(catkin REQUIRED COMPONENTS
     geometry_msgs
     roscpp
     fc_tasks
+    message_generation
 )
+
+add_service_files(
+    FILES
+    Weld.srv
+    LaserArm.srv
+    LaserEmit.srv
+)
+generate_messages(
+    DEPENDENCIES
+    std_msgs
+    fc_msgs
+)
+
 
 catkin_package(
     CATKIN_DEPENDS fc_msgs geometry_msgs roscpp rospy
 )
+install(DIRECTORY src/le_classmate_ros/
+  DESTINATION ${CATKIN_PACKAGE_PYTHON_DESTINATION}
+  PATTERN "*.py"
+)
 
-catkin_install_python(
-  PROGRAMS
-    dxf_script.py
-    io_test.py
-    test_script.py
+install(PROGRAMS
+  src/le_classmate_ros/Welder.py
+  src/le_classmate_ros/Welding.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
+
+
 
 

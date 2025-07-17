@@ -1,7 +1,6 @@
-#!/usr/bin/env python3
 import comet_rpc as rpc
 import time
-from Welding import Welder
+from fanuc_ros1.le_classmate_ros.src.Welding import Welder
 import rospy
 from geometry_msgs.msg import Pose 
 from fc_msgs.srv import ExecuteCartesianTrajectory, SetPose
@@ -9,7 +8,7 @@ import numpy as np
 from ezdxf.math import BoundingBox2d, Vec2
 import ezdxf
 
-DXF_FILE_PATH = "/root/ros1_ws/src/fanuc_ros1/fc_tasks/scripts/rect2.dxf"
+DXF_FILE_PATH = "/root/ros1_ws/src/fanuc_ros1/le_classmate_ros/data/rect2.dxf"
 FIXED_Z = 0.1
 FIXED_QUAT = (-1., 0., 0., 0.)
 
@@ -102,7 +101,7 @@ def parse_dxf_to_poses(dxf_file, centred = True) -> list:
 
 if __name__ == '__main__':
 
-    server = ... # robot_ip
+    server = '192.168.2.151' # robot_ip
     welder = Welder(server)
 
     rospy.init_node('dxf_trajectory')
@@ -115,52 +114,30 @@ if __name__ == '__main__':
     for pose in poses: 
         print(pose, "\n")
 
-    # Setting override to 100%
     rpc.vmip_writeva(server, "*SYSTEM*", "$MCR.$GENOVERRIDE", value=100)
-
-    # Laser Power Watt Setting 
-    # This is Register 102. Needs to be done on TP. Can add a check if needed 
-    # GOUT 2 seems to be labelled the same. 
-
-    # Enable External Control 
     rpc.iovalset(server, rpc.IoType.DigitalOut, index=47, value=1)
-
-    # Enable Aiming Laser 
     rpc.iovalset(server, rpc.IoType.DigitalOut, index=43, value=1)
 
-    # CALL LASER_READY_ARM
     welder.laser_ready_arm()
 
-    # Some linear movement--> guessing homing 7->4->5->6
     try:
         response = set_pose(home, 'sim1/base_link', 0.1, 0.1, 'LIN')
         rospy.loginfo("Response Pose:\n%s", response.pose)
     except rospy.ServiceException as e:
         rospy.logerr("Service call failed: %s", str(e))
 
-    # CALL LASER_START_EMIT 
     welder.laser_start_emit()
 
     time.sleep(0.5)
-    # Weld Start[1,3] ??
-    time.sleep(0.2)
-
-    #execute trajectory... Here moved to 2
     try: 
         response = set_pose(poses, 0.01, 0.0, 0.05, 0.05, 0.0)
         rospy.loginfo("Response Pose:\n%s", response.pose)
     except rospy.ServiceException as e:
         rospy.logerr("Service call failed: %s", str(e))
-
     time.sleep(0.2)
-    # Weld End [1,3] ??
-    time.sleep(0.05)
-    # moved to p3 
-
-    # CALL LASER_STOP_EMIT 
+    
     welder.laser_stop_emit()
 
-    # moved to p1 [L   @P]
     try:
         response = set_pose(home, 'sim1/base_link', 0.1, 0.1, 'LIN')
         rospy.loginfo("Response Pose:\n%s", response.pose)
@@ -169,5 +146,4 @@ if __name__ == '__main__':
 
     time.sleep(2)
 
-    # CALL LASER_DISARM
     welder.laser_disarm()
