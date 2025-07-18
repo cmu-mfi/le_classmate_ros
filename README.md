@@ -1,100 +1,176 @@
 # le_classmate_ros
 
-ROS Integration for Welding Automation on the Lincoln Electric Classmate using Fanuc + `comet_rpc`
+## ROS Interface for Laser and Arc Welding on Lincoln Electric Classmate Cells
 
-## Overview
+This package provides a ROS-compatible control layer for a Fanuc-driven Lincoln Electric Classmate welding cell. It enables service-based control of welding operations via `comet_rpc`, conversion of CAD geometries into robot trajectories, and execution of coordinated laser or arc weld paths.
 
-This package provides a ROS interface for controlling welding operations on a Lincoln Electric Classmate cell equipped with a Fanuc robot and a `comet_rpc` I/O server. It enables trajectory-driven laser and arc welding by:
-
-- Parsing DXF files into Cartesian robot trajectories.
-- Executing safe, high-level laser and welding control commands.
-- Integrating analog/digital I/O over the `comet_rpc` protocol.
-- Providing reusable helper classes and scripts to facilitate automation.
+---
 
 ## Features
 
-- Welding Control: High-level Python interface for laser and arc welding operations.
-- DXF Parsing: Converts 2D CAD geometry to 3D Cartesian poses.
-- ROS Services: Uses `fc_msgs` and `fc_tasks` for robot motion and welding coordination.
-- RPC Integration: Full compatibility with Fanuc controllers via `comet_rpc`.
+- ROS service interface for laser and arc welding control
+- DXF-based trajectory generation for weld paths
+- Integration with `comet_rpc` for direct I/O-level control of Fanuc systems
+- Custom weld macros support via LS files
+- Launch file and service definitions for easy orchestration
+- Standalone API for non-ROS workflows via the `Welder` class
+
+---
+
+## Directory Structure
+
+```
+le_classmate_ros/
+├── CMakeLists.txt
+├── package.xml
+├── launch/
+│   └── welder.launch                  # Launches the welder service node
+├── scripts/
+│   ├── dxf_script.py                  # Converts DXF to Cartesian poses and executes them
+│   ├── test_script.py                 # Basic test for arc welding I/O
+│   └── laser_run.py                   # ROS node providing weld + laser services
+├── srv/
+│   ├── Weld.srv                       # Service: Start/Stop welding
+│   ├── LaserArm.srv                   # Service: Arm/Disarm laser
+│   └── LaserEmit.srv                  # Service: Start/Stop laser emission
+├── data/
+│   └── rect2.dxf                      # Example DXF path input
+├── ls/
+│   └── ros_movesm.ls                  # Fanuc LS macro for ROS motion
+├── src/
+│   └── le_classmate_ros/
+│       └── Welding.py                 # Core welder class wrapping comet_rpc I/O
+```
+
+---
 
 ## Dependencies
 
-Make sure the following packages are installed:
+### ROS Packages
+- `rospy`
+- `roscpp`
+- `geometry_msgs`
+- `fc_msgs`
+- `fc_tasks`
 
-### ROS Dependencies
-- rospy
-- roscpp
-- geometry_msgs
-- fc_msgs
-- fc_tasks
+### Python Packages
+- `comet_rpc` (https://github.com/gavanderhoorn/comet_rpc)
+- `ezdxf`
+- `numpy`
 
-### Python Dependencies
-- comet_rpc (https://github.com/gavanderhoorn/comet_rpc)
-- ezdxf
-- numpy
+---
+
+## Services
+
+Provided by `laser_run.py` node:
+
+| Service Name         | Type            | Description                          |
+|----------------------|-----------------|--------------------------------------|
+| `/weld_start`        | `Weld.srv`      | Start arc welding process            |
+| `/weld_end`          | `Weld.srv`      | End arc welding process              |
+| `/laser_arm`         | `LaserArm.srv`  | Prepare laser for emission           |
+| `/laser_disarm`      | `LaserArm.srv`  | Disable laser safely                 |
+| `/laser_emit_start`  | `LaserEmit.srv` | Begin laser emission                 |
+| `/laser_emit_stop`   | `LaserEmit.srv` | Stop laser emission                  |
+
+All services return a `bool State` field indicating success.
+
+---
 
 ## Usage
 
-### 1. Launch the ROS core and your robot stack
-Ensure your robot controller and `comet_rpc` server are running. ROS services for trajectory execution should be available:
-- {namespace}/fc_execute_cartesian_trajectory
-- {namespace}/fc_set_pose
+### 1. Build
 
-### 2. Run DXF-to-Trajectory Execution
-
+```bash
+cd ~/ros1_ws
+catkin_make
+source devel/setup.bash
 ```
+
+### 2. Launch Welder Node
+
+```bash
+roslaunch le_classmate_ros welder.launch
+```
+
+This launches `laser_run.py`, which exposes service interfaces for welding.
+
+### 3. DXF Trajectory Execution
+
+```bash
 rosrun le_classmate_ros dxf_script.py
 ```
 
-This script parses a DXF file into poses, scales and centers the geometry to fit the robot workspace, and calls the appropriate trajectory service.
+Reads `data/rect2.dxf`, transforms geometry to robot coordinates, and sends it to the controller via `fc_execute_cartesian_trajectory`.
 
-### 3. Weld Execution with Laser Control
+### 4. Manual Welding Test
 
-```
-rosrun le_classmate_ros io_test.py
-```
-
-This performs a full cycle:
-- Arms the laser
-- Starts emission
-- Executes a weld trajectory
-- Stops and disarms the laser
-
-### 4. Test I/O Manually
-
-```
+```bash
 rosrun le_classmate_ros test_script.py
 ```
 
-A lightweight I/O toggle script for rapid verification and debugging.
+Runs a minimal weld start + end test using arc welding control.
 
-## Welder Class (Python API)
+---
 
-The `Welder` class in `Welding.py` abstracts the I/O logic for:
+## Using the `Welder` Class Without ROS
 
-### Laser Control
-- `laser_ready_arm()`
-- `laser_start_emit()`
-- `laser_stop_emit()`
-- `laser_disarm()`
+The `Welding.Welder` class can be used directly in standalone Python scripts to control welding I/O over RPC:
 
-### Arc Welding Control
-- `weld_start()`
-- `weld_end()`
+```python
+from le_classmate_ros.Welding import Welder
+import comet_rpc as rpc
 
-### Shielding Gas Control
-- `gas_start()`
-- `gas_end()`
+with rpc.Server('192.168.2.151') as server:
+    welder = Welder(server,
+                    laser_power_watts=800,
+                    weld_voltage=21,
+                    weld_current=180,
+                    weld_wirefeed_speed=12)
 
-Refer to the inline docstrings or the source file for detailed logic and I/O mapping.
+    # Prepare and start laser
+    welder.laser_ready_arm()
+    welder.laser_start_emit()
 
+    # Move robot using your control stack...
+
+    # Stop laser and disarm
+    welder.laser_stop_emit()
+    welder.laser_disarm()
+
+    # Start arc weld
+    welder.weld_start()
+    # Wait for motion...
+    welder.weld_end()
+```
+
+The class handles all relevant I/O mappings and safety interlocks.
+
+---
+
+## I/O Mapping Summary
+
+| Type     | Index | Function                  |
+|----------|-------|---------------------------|
+| DOUT     | 25    | Weld Start                |
+| DOUT     | 26    | Gas Start                 |
+| DIN      | 25    | Arc Detect                |
+| DIN      | 27    | Gas Fault                 |
+| DIN      | 28    | Wire Fault                |
+| AOUT     | 1–6   | Weld Cmds (voltage, etc.) |
+| AIN      | 1–4   | Weld Feedback             |
+| DOUT     | 20    | ArcTool Weld Start        |
+| DOUT     | 21    | ArcTool Weld End          |
+
+---
 
 ## Author
 
 Ankit Aggarwal  
 ankitagg@andrew.cmu.edu  
 Carnegie Mellon University | Manufacturing Futures Institute
+
+---
 
 ## License
 
