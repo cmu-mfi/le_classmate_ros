@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
     fc_tasks
     message_generation
 )
+catkin_python_setup()
 
 add_service_files(
     FILES
@@ -26,18 +27,22 @@ generate_messages(
     fc_msgs
 )
 
-
 catkin_package(
     CATKIN_DEPENDS fc_msgs geometry_msgs roscpp rospy
 )
+
+
 install(DIRECTORY src/le_classmate_ros/
   DESTINATION ${CATKIN_PACKAGE_PYTHON_DESTINATION}
   PATTERN "*.py"
+  PATTERN "__pycache__" EXCLUDE
 )
 
-install(PROGRAMS
-  src/le_classmate_ros/Welder.py
-  src/le_classmate_ros/Welding.py
+catkin_install_python(PROGRAMS
+
+  scripts/dxf_script.py
+  scripts/test_script.py
+  scripts/laser_run.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

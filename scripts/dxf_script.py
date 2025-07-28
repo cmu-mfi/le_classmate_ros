@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import rospy
 import ezdxf 
 import tf 
@@ -5,15 +6,19 @@ import math
 import numpy as np
 
 from geometry_msgs.msg import Pose 
-from fc_msgs.srv import ExecuteCartesianTrajectory
+from fc_msgs.srv import ExecuteCartesianTrajectory, SetPose
 from ezdxf.math import BoundingBox2d, Vec2
+import comet_rpc as rpc
+import time
+from le_classmate_ros.Welding import Welder
+
 
 # Currently, this script can process Lines and Polygons. 
 
 
-DXF_FILE_PATH = "/root/ros1_ws/src/fanuc_ros1/fc_tasks/scripts/rect2.dxf"
-FIXED_Z = 0.1
-FIXED_QUAT = (-1., 0., 0., 0.)
+DXF_FILE_PATH = "/root/ros1_ws/src/fanuc_ros1/fc_tasks/scripts/welding/rect2.dxf"
+FIXED_Z = 0.405
+FIXED_QUAT = (0.707, 0, 0.707, 0)
 
 # workspace bounds: lateral-800mm, front-600mm with centre at 0.55
 target_length_x = 0.6
@@ -105,15 +110,40 @@ def parse_dxf_to_poses(dxf_file, centred = True) -> list:
     return poses 
 
 if __name__ == '__main__':
+
     poses = parse_dxf_to_poses(DXF_FILE_PATH, True)
     for pose in poses: 
         print(pose, "\n")
 
     rospy.init_node('dxf_trajectory')
-    rospy.wait_for_service('/sim1/fc_execute_cartesian_trajectory')
-    try:
-        set_pose = rospy.ServiceProxy('/sim1/fc_execute_cartesian_trajectory', ExecuteCartesianTrajectory)
-        response = set_pose(poses, 0.01, 0.0, 0.05, 0.05, 0.0)
-        rospy.loginfo("Response Pose:\n%s", response.pose)
-    except rospy.ServiceException as e:
-        rospy.logerr("Service call failed: %s", str(e))
+    rospy.wait_for_service('/real/fc_execute_cartesian_trajectory')
+    execTraj = rospy.ServiceProxy('/real/fc_execute_cartesian_trajectory', ExecuteCartesianTrajectory)
+
+    rospy.wait_for_service('/real/fc_set_pose')
+    set_pose = rospy.ServiceProxy('/real/fc_set_pose', SetPose)
+
+    server = '192.168.2.151'
+    welder = Welder(server=server)
+
+    rpc.vmip_writeva(server, "*SYSTEM*", "$MCR.$GENOVERRIDE", value=100)
+    rpc.iovalset(server, rpc.IoType.DigitalOut, index=47, value=1)
+    rpc.iovalset(server, rpc.IoType.DigitalOut, index=43, value=0)
+
+
+    response_null = set_pose(poses[0], '/real/base_link', 0.1, 0.1, 'PTP')
+
+    welder.laser_ready_arm()
+    time.sleep(2)
+    welder.laser_start_emit()
+    rpc.iovalset(server, rpc.IoType.DigitalOut, index=20, value=1)
+    response = execTraj(poses, 0.01, 0.0, 0.005, 0.03, 0.0)
+
+    rpc.iovalset(server, rpc.IoType.DigitalOut, index=21, value=1)
+    response_null = set_pose(poses[-1], '/real/base_link', 0.1, 0.1, 'PTP')
+    # time.sleep(5)
+    welder.laser_stop_emit()
+    welder.laser_disarm()
+
+    # time.sleep(10)
+        # rpc.iovalset(server, rpc.IoType.DigitalOut, index=21, value=1)
+    # response_null = set_pose(poses[-1], '/real/base_link', 0.1, 0.1, 'PTP')
