@@ -218,8 +218,8 @@ if __name__ == '__main__':
         combined_targets.append( (idx, poses[idx], "on") )
     combined_targets.sort(key=lambda x: x[0])
 
-    rospy.wait_for_service('/real/fc_execute_cartesian_trajectory')
-    execTraj = rospy.ServiceProxy('/real/fc_execute_cartesian_trajectory', ExecuteCartesianTrajectory)
+    rospy.wait_for_service('/real/fc_execute_cartesian_trajectory_async')
+    execTraj = rospy.ServiceProxy('/real/fc_execute_cartesian_trajectory_async', ExecuteCartesianTrajectory)
 
     
     rospy.Subscriber('/real/tool0_pose', PoseStamped, monitor_pose_callback, callback_args=(combined_targets))
@@ -245,11 +245,12 @@ if __name__ == '__main__':
     time.sleep(2)
     welder.laser_start_emit()
     welder.weld_start()
-    response = execTraj(new_poses, 0.01, 0.0, 0.05, 0.1, 0.0)
+
+    response = execTraj(new_poses, 0.01, 0.0, 0.01, 0.01, 0.0)
 
     welder.weld_end()
     response_null = set_pose(new_poses[-1], '/base_link', 0.3, 0.1, 'PTP')
-    time.sleep(5)
+    # time.sleep(5)
     welder.laser_stop_emit()
     welder.laser_disarm()
 

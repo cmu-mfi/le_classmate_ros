@@ -15,7 +15,7 @@ class Welder():
 
     def __init__(self, 
                  server, 
-                 laser_power_watts = 700, 
+                 laser_power_watts = 900, 
                  weld_voltage = 0, 
                  weld_current = 0, 
                  weld_wirefeed_speed = 0):
