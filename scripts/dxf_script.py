@@ -197,6 +197,8 @@ if __name__ == '__main__':
     new_poses = []
     for pose in poses:
         new_poses.append(pose.pose)
+
+        
     response_null = set_pose(new_poses[0], '/base_link', 0.3, 0.1, 'PTP')
 
     with open('/root/ros1_ws/src/le_classmate_ros/data/poses.txt', 'w') as f:
