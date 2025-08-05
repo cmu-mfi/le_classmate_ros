@@ -15,7 +15,7 @@ class Welder():
 
     def __init__(self, 
                  server, 
-                 laser_power_watts = 700, 
+                 laser_power_watts = 900, 
                  weld_voltage = 0, 
                  weld_current = 0, 
                  weld_wirefeed_speed = 0):
@@ -146,38 +146,12 @@ class Welder():
             print("Wire Fault Detected")
             return
         else: 
-            # rpc.iovalset(self.server, rpc.IoType.AnalogOut, index=1, value=self.weld_voltage)
-            # rpc.iovalset(self.server, rpc.IoType.AnalogOut, index=2, value=self.weld_current)
-            # rpc.iovalset(self.server, rpc.IoType.AnalogOut, index=3, value=self.weld_wirefeed_speed)
-            # rpc.iovalset(self.server, rpc.IoType.AnalogOut, index=4, value=self.weld_wirefeed_speed)
-            # rpc.iovalset(self.server, rpc.IoType.AnalogOut, index=5, value=self.weld_wirefeed_speed)
-            # rpc.iovalset(self.server, rpc.IoType.AnalogOut, index=6, value=self.weld_wirefeed_speed)
 
-
-            # rpc.iovalset(self.server, rpc.IoType.DigitalOut, index=26, value=1) # GAS START
-            # time.sleep(0.5)
-            # rpc.iovalset(self.server, rpc.IoType.DigitalOut, index=49, value=1) # WELD START 
-
-            # start_time = time.time()
-            # while time.time() - start_time < self.timeout: 
-            #     if rpc.iovalrd(self.server, rpc.IoType.DigitalIn, index=25).value == 1: #ARC DETECT
-            #         break
-            #     time.sleep(self.poll_interval)
-            # else:
-            #     print("ARC NOT ESTABLISHED")
-            #     self.weld_end()
-            #     return
-
-            # rpc.iovalset(self.server, rpc.IoType.DigitalOut, index=30, value=1) # Feed Forward
             rpc.iovalset(self.server, rpc.IoType.DigitalOut, index=20, value=1)
             return  
         
     def weld_end(self):
-        # rpc.iovalset(self.server, rpc.IoType.DigitalOut, index=30, value=0) # Feed Forward
-        # rpc.iovalset(self.server, 
-        # .IoType.DigitalOut, index=49, value=0) # WELD START 
-        # time.sleep(0.5)
-        # rpc.iovalset(self.server, rpc.IoType.DigitalOut, index=26, value=0) # GAS START
+
         rpc.iovalset(self.server, rpc.IoType.DigitalOut, index=21, value=1)
         print("Weld Ended")
 

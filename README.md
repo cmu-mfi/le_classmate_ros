@@ -171,7 +171,3 @@ ankitagg@andrew.cmu.edu
 Carnegie Mellon University | Manufacturing Futures Institute
 
 ---
-
-## License
-
-TODO – Please update `package.xml` with the appropriate license before use.

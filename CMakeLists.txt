@@ -43,6 +43,7 @@ catkin_install_python(PROGRAMS
   scripts/dxf_script.py
   scripts/test_script.py
   scripts/laser_run.py
+  scripts/layered_test.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
