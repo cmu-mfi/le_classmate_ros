@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 import rospy
 import ezdxf 
-import tf 
 import math 
 import numpy as np
 
 from geometry_msgs.msg import Pose, PoseStamped
-from fc_msgs.srv import ExecuteCartesianTrajectory, SetPose
+from fc_msgs.srv import ExecuteCartesianTrajectory, SetPose, SetIO
 from ezdxf.math import BoundingBox2d, Vec2
 import comet_rpc as rpc
 import time
@@ -14,7 +13,7 @@ from le_classmate_ros.Welding import Welder
 from le_classmate_ros.srv import LaserArm, LaserEmit, Weld
 
 
-# Currently, this script can process Lines and Polygons. 
+# Currently, this script can process Lines and Polygons. Can be extended to support more DXF entities such as Circles, Arcs, etc.
 
 
 DXF_FILE_PATH = "/root/ros1_ws/src/le_classmate_ros/data/MFI8.dxf"
@@ -25,10 +24,6 @@ FIXED_QUAT = (0.707, 0 , 0.707, 0)
 target_length_x = 0.6
 target_length_y = 0.8
 
-#home pose 
-home = PoseStamped()
-home.pose.position.x, home.pose.position.y, home.pose.position.z = 0.55, 0, 0.805
-home.pose.orientation.x, home.pose.orientation.y, home.pose.orientation.z, home.pose.orientation.w = 0.707, 0, 0.707, 0
 
 def transform_to_centre(center_x, center_y, poses, scale) -> list:
     workspace_centre_x = 0.53
@@ -185,12 +180,29 @@ def monitor_pose_callback(msg, callback_args):
 if __name__ == '__main__':
 
     rospy.init_node('dxf_trajectory')
+
     rospy.wait_for_service('/real/fc_set_pose')
+    rospy.wait_for_service('/real/fc_execute_cartesian_trajectory_async')
+    rospy.wait_for_service('/weld_start')
+    rospy.wait_for_service('/weld_end')
+    rospy.wait_for_service('/laser_emit_start')
+    rospy.wait_for_service('/laser_emit_stop')
+    rospy.wait_for_service('/set_io_value')
+    rospy.wait_for_service('/laser_ready_arm')
+    rospy.wait_for_service('/laser_disarm')
+
     set_pose = rospy.ServiceProxy('/real/fc_set_pose', SetPose)
+    execTraj = rospy.ServiceProxy('/real/fc_execute_cartesian_trajectory_async', ExecuteCartesianTrajectory)
+    weldOn = rospy.ServiceProxy('/weld_start', Weld)
+    weldOff = rospy.ServiceProxy('/weld_end', Weld)
+    LaserOn = rospy.ServiceProxy('/laser_emit_start', LaserEmit)
+    LaserOff = rospy.ServiceProxy('/laser_emit_stop', LaserEmit)
+    Set_IO = rospy.ServiceProxy('/set_io_value', SetIO)
+    Laser_Arm = rospy.ServiceProxy('/laser_ready_arm', LaserArm)
+    Laser_Disarm = rospy.ServiceProxy('/laser_disarm', LaserArm) 
 
+    rospy.Subscriber('/real/tool0_pose', PoseStamped, monitor_pose_callback, callback_args=(combined_targets))
 
-    server = '192.168.2.151'
-    welder = Welder(server=server)
     poses = parse_dxf_to_poses(DXF_FILE_PATH, True)
     found_targets = set()
 
@@ -198,14 +210,9 @@ if __name__ == '__main__':
     for pose in poses:
         new_poses.append(pose.pose)
 
-        
-    response_null = set_pose(new_poses[0], '/base_link', 0.3, 0.1, 'PTP')
-
     with open('/root/ros1_ws/src/le_classmate_ros/data/poses.txt', 'w') as f:
         for index, pose in enumerate(new_poses):
             f.write(f"{index} - {pose.position.x}, {pose.position.y}, {pose.position.z}\n")
-
-
     
     to_monitor_off_indices = [4,7,9]
     to_monitor_off = [poses[i] for i in to_monitor_off_indices]
@@ -220,44 +227,18 @@ if __name__ == '__main__':
         combined_targets.append( (idx, poses[idx], "on") )
     combined_targets.sort(key=lambda x: x[0])
 
-    rospy.wait_for_service('/real/fc_execute_cartesian_trajectory_async')
-    execTraj = rospy.ServiceProxy('/real/fc_execute_cartesian_trajectory_async', ExecuteCartesianTrajectory)
+    _ = set_pose(new_poses[0], '/base_link', 0.3, 0.1, 'PTP')
+    rpc.vmip_writeva('192.168.2.151', "*SYSTEM*", "$MCR.$GENOVERRIDE", value=100) # Set override to 100% - needed for welding (once per startup)
+    _ = Set_IO('Digital_OUT', 47, 1) # Enable external control
 
-    
-    rospy.Subscriber('/real/tool0_pose', PoseStamped, monitor_pose_callback, callback_args=(combined_targets))
-
-
-    rospy.wait_for_service('/weld_start')
-    rospy.wait_for_service('/weld_end')
-    rospy.wait_for_service('/laser_emit_start')
-    rospy.wait_for_service('/laser_emit_stop')
-
-    weldOn = rospy.ServiceProxy('/weld_start', Weld)
-    weldOff = rospy.ServiceProxy('/weld_end', Weld)
-    LaserOn = rospy.ServiceProxy('/laser_emit_start', LaserEmit)
-    LaserOff = rospy.ServiceProxy('/laser_emit_stop', LaserEmit)
-
-
-    rpc.vmip_writeva(server, "*SYSTEM*", "$MCR.$GENOVERRIDE", value=100)
-    rpc.iovalset(server, rpc.IoType.DigitalOut, index=47, value=1)
-    rpc.iovalset(server, rpc.IoType.DigitalOut, index=43, value=0)
-
-
-    welder.laser_ready_arm()
+    _ = Laser_Arm(True) # Arm the laser
     time.sleep(2)
-    welder.laser_start_emit()
-    welder.weld_start()
+    _ = LaserOn(True) # Start laser emission
+    _ = weldOn(True) # Start welding
 
-    response = execTraj(new_poses, 0.01, 0.0, 0.01, 0.01, 0.0)
+    _ = execTraj(new_poses, 0.01, 0.0, 0.01, 0.01, 0.0)
 
-    welder.weld_end()
-    response_null = set_pose(new_poses[-1], '/base_link', 0.3, 0.1, 'PTP')
-    # time.sleep(5)
-    welder.laser_stop_emit()
-    welder.laser_disarm()
-
-
-    # FUME EXTRACT
-    rpc.iovalset(server, rpc.IoType.DigitalOut, index=56, value=1) # FUME EXTRACT
-    time.sleep(10)
-    rpc.iovalset(server, rpc.IoType.DigitalOut, index=56, value=0) # FUME EXTRACT
+    _ = weldOff(True) # Stop welding
+    _ = set_pose(new_poses[-1], '/base_link', 0.3, 0.1, 'PTP')
+    _ = LaserOff(True) # Stop laser emission
+    _ = Laser_Disarm(True) # Disarm the laser

@@ -101,15 +101,15 @@ This launches `laser_run.py`, which exposes service interfaces for welding.
 rosrun le_classmate_ros dxf_script.py
 ```
 
-Reads `data/rect2.dxf`, transforms geometry to robot coordinates, and sends it to the controller via `fc_execute_cartesian_trajectory`.
+Reads `.dxf`, transforms geometry to robot coordinates, and sends it to the controller via `fc_execute_cartesian_trajectory`.
 
-### 4. Manual Welding Test
+### 4. Layered Test
 
 ```bash
-rosrun le_classmate_ros test_script.py
+rosrun le_classmate_ros layered_test.py
 ```
 
-Runs a minimal weld start + end test using arc welding control.
+Runs a two layered line laser weld in a sequence.
 
 ---
 
@@ -123,10 +123,7 @@ import comet_rpc as rpc
 
 with rpc.Server('192.168.2.151') as server:
     welder = Welder(server,
-                    laser_power_watts=800,
-                    weld_voltage=21,
-                    weld_current=180,
-                    weld_wirefeed_speed=12)
+                    laser_power_watts=800)
 
     # Prepare and start laser
     welder.laser_ready_arm()
@@ -144,7 +141,7 @@ with rpc.Server('192.168.2.151') as server:
     welder.weld_end()
 ```
 
-The class handles all relevant I/O mappings and safety interlocks.
+The class handles all relevant I/O mappings and safety interlocks. An example is shown in scripts/welder_class_example.py
 
 ---
 

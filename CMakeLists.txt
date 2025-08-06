@@ -41,8 +41,7 @@ install(DIRECTORY src/le_classmate_ros/
 catkin_install_python(PROGRAMS
 
   scripts/dxf_script.py
-  scripts/test_script.py
-  scripts/laser_run.py
+  scripts/welder_class_example.py
   scripts/layered_test.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
