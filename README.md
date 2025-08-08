@@ -78,6 +78,13 @@ Provided by `laser_run.py` node:
 All services return a `bool State` field indicating success.
 
 ---
+## Installation 
+
+1. Install the [fanuc_ros1](https://github.com/cmu-mfi/fanuc_ros1) repository in a docker container. 
+2. Replicate the [rosmovesm.ls](https://github.com/cmu-mfi/le_classmate_ros/tree/main/ls) (found in the ls/ directory) changes in your robot controller teach pendant .
+3. Clone le_classmate_ros into the src folder.
+
+---
 
 ## Usage
 
@@ -85,7 +92,7 @@ All services return a `bool State` field indicating success.
 
 ```bash
 cd ~/ros1_ws
-catkin_make
+catkin build
 source devel/setup.bash
 ```
 
