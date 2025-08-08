@@ -47,6 +47,7 @@ le_classmate_ros/
 ## Dependencies
 
 ### ROS Packages
+
 - `rospy`
 - `roscpp`
 - `geometry_msgs`
@@ -54,6 +55,7 @@ le_classmate_ros/
 - `fc_tasks`
 
 ### Python Packages
+
 - `comet_rpc` (https://github.com/gavanderhoorn/comet_rpc)
 - `ezdxf`
 - `numpy`
@@ -64,14 +66,14 @@ le_classmate_ros/
 
 Provided by `laser_run.py` node:
 
-| Service Name         | Type            | Description                          |
-|----------------------|-----------------|--------------------------------------|
-| `/weld_start`        | `Weld.srv`      | Start arc welding process            |
-| `/weld_end`          | `Weld.srv`      | End arc welding process              |
-| `/laser_arm`         | `LaserArm.srv`  | Prepare laser for emission           |
-| `/laser_disarm`      | `LaserArm.srv`  | Disable laser safely                 |
-| `/laser_emit_start`  | `LaserEmit.srv` | Begin laser emission                 |
-| `/laser_emit_stop`   | `LaserEmit.srv` | Stop laser emission                  |
+| Service Name        | Type            | Description                |
+| ------------------- | --------------- | -------------------------- |
+| `/weld_start`       | `Weld.srv`      | Start arc welding process  |
+| `/weld_end`         | `Weld.srv`      | End arc welding process    |
+| `/laser_arm`        | `LaserArm.srv`  | Prepare laser for emission |
+| `/laser_disarm`     | `LaserArm.srv`  | Disable laser safely       |
+| `/laser_emit_start` | `LaserEmit.srv` | Begin laser emission       |
+| `/laser_emit_stop`  | `LaserEmit.srv` | Stop laser emission        |
 
 All services return a `bool State` field indicating success.
 
@@ -147,17 +149,17 @@ The class handles all relevant I/O mappings and safety interlocks. An example is
 
 ## I/O Mapping Summary
 
-| Type     | Index | Function                  |
-|----------|-------|---------------------------|
-| DOUT     | 25    | Weld Start                |
-| DOUT     | 26    | Gas Start                 |
-| DIN      | 25    | Arc Detect                |
-| DIN      | 27    | Gas Fault                 |
-| DIN      | 28    | Wire Fault                |
-| AOUT     | 1–6   | Weld Cmds (voltage, etc.) |
-| AIN      | 1–4   | Weld Feedback             |
-| DOUT     | 20    | ArcTool Weld Start        |
-| DOUT     | 21    | ArcTool Weld End          |
+| Type | Index | Function                  |
+| ---- | ----- | ------------------------- |
+| DOUT | 25    | Weld Start                |
+| DOUT | 26    | Gas Start                 |
+| DIN  | 25    | Arc Detect                |
+| DIN  | 27    | Gas Fault                 |
+| DIN  | 28    | Wire Fault                |
+| AOUT | 1–6   | Weld Cmds (voltage, etc.) |
+| AIN  | 1–4   | Weld Feedback             |
+| DOUT | 20    | ArcTool Weld Start        |
+| DOUT | 21    | ArcTool Weld End          |
 
 ---
 

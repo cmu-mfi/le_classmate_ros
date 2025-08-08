@@ -9,8 +9,9 @@ from fc_msgs.srv import ExecuteCartesianTrajectory, SetPose, SetIO
 from ezdxf.math import BoundingBox2d, Vec2
 import comet_rpc as rpc
 import time
-from le_classmate_ros.Welding import Welder
+from le_classmate_ros.Welder import Welder
 from le_classmate_ros.srv import LaserArm, LaserEmit, Weld
+from std_srvs.srv import Trigger
 
 
 # Currently, this script can process Lines and Polygons. Can be extended to support more DXF entities such as Circles, Arcs, etc.
@@ -190,6 +191,7 @@ if __name__ == '__main__':
     rospy.wait_for_service('/set_io_value')
     rospy.wait_for_service('/laser_ready_arm')
     rospy.wait_for_service('/laser_disarm')
+    rospy.wait_for_service('/set_override')
 
     set_pose = rospy.ServiceProxy('/real/fc_set_pose', SetPose)
     execTraj = rospy.ServiceProxy('/real/fc_execute_cartesian_trajectory_async', ExecuteCartesianTrajectory)
@@ -199,7 +201,8 @@ if __name__ == '__main__':
     LaserOff = rospy.ServiceProxy('/laser_emit_stop', LaserEmit)
     Set_IO = rospy.ServiceProxy('/set_io_value', SetIO)
     Laser_Arm = rospy.ServiceProxy('/laser_ready_arm', LaserArm)
-    Laser_Disarm = rospy.ServiceProxy('/laser_disarm', LaserArm) 
+    Laser_Disarm = rospy.ServiceProxy('/laser_disarm', LaserArm)
+    set_override = rospy.ServiceProxy('/set_override', Trigger) 
 
     rospy.Subscriber('/real/tool0_pose', PoseStamped, monitor_pose_callback, callback_args=(combined_targets))
 
@@ -227,18 +230,18 @@ if __name__ == '__main__':
         combined_targets.append( (idx, poses[idx], "on") )
     combined_targets.sort(key=lambda x: x[0])
 
-    _ = set_pose(new_poses[0], '/base_link', 0.3, 0.1, 'PTP')
-    rpc.vmip_writeva('192.168.2.151', "*SYSTEM*", "$MCR.$GENOVERRIDE", value=100) # Set override to 100% - needed for welding (once per startup)
-    _ = Set_IO('Digital_OUT', 47, 1) # Enable external control
+    set_pose(new_poses[0], '/base_link', 0.3, 0.1, 'PTP')
+    set_override(100) # Ensure override is set to 100
+    Set_IO('Digital_OUT', 47, 1) # Enable external control
 
-    _ = Laser_Arm(True) # Arm the laser
+    Laser_Arm(True) # Arm the laser
     time.sleep(2)
-    _ = LaserOn(True) # Start laser emission
-    _ = weldOn(True) # Start welding
+    LaserOn(True) # Start laser emission
+    weldOn(True) # Start welding
 
-    _ = execTraj(new_poses, 0.01, 0.0, 0.01, 0.01, 0.0)
+    execTraj(new_poses, 0.01, 0.0, 0.01, 0.01, 0.0)
 
-    _ = weldOff(True) # Stop welding
-    _ = set_pose(new_poses[-1], '/base_link', 0.3, 0.1, 'PTP')
-    _ = LaserOff(True) # Stop laser emission
-    _ = Laser_Disarm(True) # Disarm the laser
+    weldOff(True) # Stop welding
+    set_pose(new_poses[-1], '/base_link', 0.3, 0.1, 'PTP')
+    LaserOff(True) # Stop laser emission
+    Laser_Disarm(True) # Disarm the laser

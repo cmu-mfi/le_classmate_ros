@@ -1,7 +1,6 @@
+# DXF Trajectory Execution with Laser & Welding Integration
 
-# DXF Trajectory Execution with Laser & Welding Integration 
-
-The dxf_script.py package uses is a complete script to perform laser welding using a dxf. The .dxf file must be contained within the workspace bounds (600mm x 800mm). The script also has functionality to scale and center the dxf to parse (x,y) coordinates for robot poses. The script is written using only ROS services to control peripherals. The code is explained below: 
+The ![dxf_script.py](scripts/dxf_script.py) is a complete script to perform laser welding using a dxf. The .dxf file must be contained within the workspace bounds (600mm x 800mm). The script also has functionality to scale and center the dxf to parse (x,y) coordinates for robot poses. The script is written using only ROS services to control peripherals. The code is explained below:
 
 This tutorial walks through loading a DXF file, parsing it into robot poses, and executing a Cartesian welding trajectory using ROS1. Laser and weld control are also integrated via services.
 
@@ -65,7 +64,7 @@ def transform_to_centre(center_x, center_y, poses, scale):
     delta_x = center_x - 0.53
     delta_y = center_y - 0.01
     transform_matrix = np.array([[1, 0, 0, -delta_x], [0, 1, 0, -delta_y], [0, 0, 1, 0], [0, 0, 0, 1]])
-    
+
     for pose in poses:
         p = [pose.pose.position.x, pose.pose.position.y, pose.pose.position.z, 1]
         p_new = np.dot(transform_matrix, p)
@@ -126,6 +125,7 @@ rospy.wait_for_service('/laser_emit_stop')
 rospy.wait_for_service('/set_io_value')
 rospy.wait_for_service('/laser_ready_arm')
 rospy.wait_for_service('/laser_disarm')
+rospy.wait_for_service('/set_override')
 
 # Create service proxies
 set_pose = rospy.ServiceProxy('/real/fc_set_pose', SetPose)
@@ -137,6 +137,7 @@ LaserOff = rospy.ServiceProxy('/laser_emit_stop', LaserEmit)
 Set_IO = rospy.ServiceProxy('/set_io_value', SetIO)
 Laser_Arm = rospy.ServiceProxy('/laser_ready_arm', LaserArm)
 Laser_Disarm = rospy.ServiceProxy('/laser_disarm', LaserArm)
+set_override = rospy.ServiceProxy('/set_override', Trigger)
 ```
 
 This block initializes your ROS node and service clients needed to control the welding process.
@@ -172,24 +173,24 @@ This section selects key trajectory points to monitor and binds them to the call
 
 ```python
 # Move to starting pose
-_ = set_pose(poses[0].pose, '/base_link', 0.3, 0.1, 'PTP')
+set_pose(poses[0].pose, '/base_link', 0.3, 0.1, 'PTP')
 
 # Setup welding systems
-rpc.vmip_writeva('192.168.2.151', "*SYSTEM*", "$MCR.$GENOVERRIDE", value=100)
-_ = Set_IO('Digital_OUT', 47, 1)
-_ = Laser_Arm(True)
+set_override(100) # Ensure override is set to 100
+Set_IO('Digital_OUT', 47, 1)
+Laser_Arm(True)
 time.sleep(2)
-_ = LaserOn(True)
-_ = weldOn(True)
+LaserOn(True)
+weldOn(True)
 
 # Execute trajectory
-_ = execTraj([p.pose for p in poses], 0.01, 0.0, 0.01, 0.01, 0.0)
+execTraj([p.pose for p in poses], 0.01, 0.0, 0.01, 0.01, 0.0)
 
 # Shut down
-_ = weldOff(True)
-_ = set_pose(poses[-1].pose, '/base_link', 0.3, 0.1, 'PTP')
-_ = LaserOff(True)
-_ = Laser_Disarm(True)
+weldOff(True)
+set_pose(poses[-1].pose, '/base_link', 0.3, 0.1, 'PTP')
+LaserOff(True)
+Laser_Disarm(True)
 ```
 
 Finally, the robot moves through the full trajectory, with laser/weld triggered as it hits waypoints. After execution, the system is shut down cleanly.

@@ -9,8 +9,9 @@ from fc_msgs.srv import ExecuteCartesianTrajectory, SetPose
 from ezdxf.math import BoundingBox2d, Vec2
 import comet_rpc as rpc
 import time
-from le_classmate_ros.Welding import Welder
+from le_classmate_ros.Welder import Welder
 from le_classmate_ros.srv import LaserArm, LaserEmit, Weld, SetIO
+from std_srvs.srv import Trigger
 
 
 FIXED_Z_1 = 0.403
@@ -48,6 +49,7 @@ if __name__ == '__main__':
     rospy.wait_for_service('/laser_ready_arm')
     rospy.wait_for_service('/laser_disarm')
     rospy.wait_for_service('/set_io_value')
+    rospy.wait_for_service('/set_override')
 
 
     set_pose = rospy.ServiceProxy('/real/fc_set_pose', SetPose)
@@ -59,34 +61,36 @@ if __name__ == '__main__':
     Laser_Arm = rospy.ServiceProxy('/laser_ready_arm', LaserArm)
     Laser_Disarm = rospy.ServiceProxy('/laser_disarm', LaserArm) 
     Set_IO = rospy.ServiceProxy('/set_io_value', SetIO)
+    set_override = rospy.ServiceProxy('/set_override', Trigger)
 
 
     server = '192.168.2.151'
     welder = Welder(server=server)
 
-    rpc.vmip_writeva(server, "*SYSTEM*", "$MCR.$GENOVERRIDE", value=100)
-    _ = Set_IO('Digital_OUT', 47, 1) # Enable external control
 
-    _ = set_pose(PointA_1.pose, '/base_link', 0.01, 0.1, 'PTP')
+    set_override(100) # Set override to 100
+    Set_IO('Digital_OUT', 47, 1) # Enable external control
 
-    _ = Laser_Arm(True) # Arm the laser
+    set_pose(PointA_1.pose, '/base_link', 0.01, 0.1, 'PTP')
+
+    Laser_Arm(True) # Arm the laser
     time.sleep(2)
-    _ = LaserOn(True) # Start laser emission
-    _ = weldOn(True) # Start welding
+    LaserOn(True) # Start laser emission
+    weldOn(True) # Start welding
 
-    _ = set_pose(PointB_1.pose, '/base_link', 0.0075, 0.1, 'PTP')
+    set_pose(PointB_1.pose, '/base_link', 0.0075, 0.1, 'PTP')
 
-    _ = weldOff(True) # Stop welding
-    _ = LaserOff(True) # Stop laser emission
+    weldOff(True) # Stop welding
+    LaserOff(True) # Stop laser emission
 
-    _ = set_pose(PointA_2.pose, '/base_link', 0.01, 0.1, 'PTP')
+    set_pose(PointA_2.pose, '/base_link', 0.01, 0.1, 'PTP')
 
-    _ = LaserOn(True) # Start laser emission
-    _ = weldOn(True) # Start welding
+    LaserOn(True) # Start laser emission
+    weldOn(True) # Start welding
 
-    _ = set_pose(PointB_2.pose, '/base_link', 0.001, 0.1, 'PTP')
+    set_pose(PointB_2.pose, '/base_link', 0.001, 0.1, 'PTP')
 
-    _ = weldOff(True) # Stop welding
-    _ = set_pose(PointB_2.pose, '/base_link', 0.3, 0.1, 'PTP')
-    _ = LaserOff(True) # Stop laser emission
-    _ = Laser_Disarm(True) # Disarm the laser
+    weldOff(True) # Stop welding
+    set_pose(PointB_2.pose, '/base_link', 0.3, 0.1, 'PTP')
+    LaserOff(True) # Stop laser emission
+    Laser_Disarm(True) # Disarm the laser
